@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: taiwanHealthMcp
+    ports:
+      - "${MCP_PORT:-8000}:${MCP_PORT:-8000}"
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+    environment:
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - MCP_HOST=${MCP_HOST:-0.0.0.0}
+      - MCP_PORT=${MCP_PORT:-8000}
+      - MCP_PATH=${MCP_PATH:-/mcp}
+      - MCP_OFFLINE=${MCP_OFFLINE:-false}
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
