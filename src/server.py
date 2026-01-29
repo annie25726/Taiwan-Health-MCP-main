@@ -14,6 +14,42 @@ from icd_service import ICDService
 from lab_service import LabService
 from utils import log_error, log_info
 
+
+class DisabledService:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __getattr__(self, _name: str):
+        def _disabled(*_args, **_kwargs):
+            return f"{self.name} service is disabled in this deployment."
+
+        return _disabled
+
+
+def parse_enabled_modules() -> set[str] | None:
+    raw = os.getenv("MCP_MODULES", "").strip()
+    if not raw:
+        return None
+    return {item.strip().lower() for item in raw.split(",") if item.strip()}
+
+
+enabled_modules = parse_enabled_modules()
+
+
+def is_enabled(module: str) -> bool:
+    return enabled_modules is None or module.lower() in enabled_modules
+
+
+def init_service(label: str, module: str, init_fn):
+    if not is_enabled(module):
+        log_info(f"{label} disabled by MCP_MODULES")
+        return DisabledService(label)
+    try:
+        return init_fn()
+    except Exception as e:
+        log_error(f"{label} failed: {e}")
+        return DisabledService(label)
+
 # 0. Load Configuration
 config = MCPConfig.from_env()
 
@@ -50,56 +86,34 @@ else:
 # 3. Initialize Services with individual try-except blocks to ensure maximum availability
 log_info("Initializing Services...")
 
-icd_service = None
-drug_service = None
-health_food_service = None
-food_nutrition_service = None
-fhir_condition_service = None
-fhir_medication_service = None
-lab_service = None
-guideline_service = None
+icd_service = init_service("ICD", "icd", lambda: ICDService(ICD_FILE_PATH, DATA_DIR))
+drug_service = init_service("Drug", "drug", lambda: DrugService(DATA_DIR))
+health_food_service = init_service(
+    "Health Food", "health_food", lambda: HealthFoodService(DATA_DIR)
+)
+food_nutrition_service = init_service(
+    "Food Nutrition", "food_nutrition", lambda: FoodNutritionService(DATA_DIR)
+)
+lab_service = init_service("Lab", "lab", lambda: LabService(DATA_DIR))
+guideline_service = init_service(
+    "Guideline", "guideline", lambda: ClinicalGuidelineService(DATA_DIR)
+)
 
-try:
-    icd_service = ICDService(ICD_FILE_PATH, DATA_DIR)
-except Exception as e:
-    log_error(f"ICDService failed: {e}")
+if is_enabled("fhir_condition") and not isinstance(icd_service, DisabledService):
+    fhir_condition_service = init_service(
+        "FHIR Condition", "fhir_condition", lambda: FHIRConditionService(icd_service)
+    )
+else:
+    fhir_condition_service = DisabledService("FHIR Condition")
 
-try:
-    drug_service = DrugService(DATA_DIR)
-except Exception as e:
-    log_error(f"DrugService failed: {e}")
-
-try:
-    health_food_service = HealthFoodService(DATA_DIR)
-except Exception as e:
-    log_error(f"HealthFoodService failed: {e}")
-
-try:
-    food_nutrition_service = FoodNutritionService(DATA_DIR)
-except Exception as e:
-    log_error(f"FoodNutritionService failed: {e}")
-
-try:
-    if icd_service:
-        fhir_condition_service = FHIRConditionService(icd_service)
-except Exception as e:
-    log_error(f"FHIRConditionService failed: {e}")
-
-try:
-    if drug_service:
-        fhir_medication_service = FHIRMedicationService(drug_service)
-except Exception as e:
-    log_error(f"FHIRMedicationService failed: {e}")
-
-try:
-    lab_service = LabService(DATA_DIR)
-except Exception as e:
-    log_error(f"LabService failed: {e}")
-
-try:
-    guideline_service = ClinicalGuidelineService(DATA_DIR)
-except Exception as e:
-    log_error(f"ClinicalGuidelineService failed: {e}")
+if is_enabled("fhir_medication") and not isinstance(drug_service, DisabledService):
+    fhir_medication_service = init_service(
+        "FHIR Medication",
+        "fhir_medication",
+        lambda: FHIRMedicationService(drug_service),
+    )
+else:
+    fhir_medication_service = DisabledService("FHIR Medication")
 
 # ==========================================
 # Group 1: ICD-10 Tools (Diagnosis & Procedures)

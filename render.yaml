@@ -10,3 +10,5 @@ services:
         value: sse
       - key: MCP_HOST
         value: 0.0.0.0
+      - key: MCP_MODULES
+        value: icd,drug,fhir_condition,fhir_medication
