@@ -12,4 +12,4 @@ COPY data /app/data
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["sh", "-c", "MCP_TRANSPORT=sse MCP_HOST=0.0.0.0 MCP_PORT=${PORT:-8000} MCP_MODULES=icd,drug,fhir_condition,fhir_medication python src/server.py"]
+CMD ["sh", "-c", "MCP_TRANSPORT=sse MCP_HOST=0.0.0.0 MCP_PORT=${PORT:-8000} MCP_MODULES=icd MCP_OFFLINE=1 python src/server.py"]

@@ -41,11 +41,13 @@ class ICDService:
             )
             if sheet_cm:
                 log_info(f"Processing Diagnoses sheet: {sheet_cm}")
-                df = pd.read_excel(xls, sheet_name=sheet_cm)
-
-                # Select specific columns: Code, English Name, Chinese Name
-                # Assumes columns [0, 2, 3] based on your specific Excel structure
-                df = df.iloc[:, [0, 2, 3]]
+                df = pd.read_excel(
+                    xls,
+                    sheet_name=sheet_cm,
+                    usecols=[0, 2, 3],
+                    dtype=str,
+                    engine="openpyxl",
+                )
                 df.columns = ["code", "name_en", "name_zh"]
                 df = df.dropna(subset=["code"])
 
@@ -60,8 +62,13 @@ class ICDService:
             )
             if sheet_pcs:
                 log_info(f"Processing Procedures sheet: {sheet_pcs}")
-                df = pd.read_excel(xls, sheet_name=sheet_pcs)
-                df = df.iloc[:, [0, 2, 3]]
+                df = pd.read_excel(
+                    xls,
+                    sheet_name=sheet_pcs,
+                    usecols=[0, 2, 3],
+                    dtype=str,
+                    engine="openpyxl",
+                )
                 df.columns = ["code", "name_en", "name_zh"]
                 df = df.dropna(subset=["code"])
                 df.to_sql("procedures", conn, index=False, if_exists="replace")

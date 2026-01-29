@@ -11,4 +11,6 @@ services:
       - key: MCP_HOST
         value: 0.0.0.0
       - key: MCP_MODULES
-        value: icd,drug,fhir_condition,fhir_medication
+        value: icd
+      - key: MCP_OFFLINE
+        value: "1"
